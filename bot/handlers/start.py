@@ -12,15 +12,17 @@ from aiogram.types import (
     InlineKeyboardButton
 )
 from bot.config import config
+# Импортируем сервис
+from bot.services.google_sheets import GoogleSheetsService
 
 router = Router(name="start")
 
+# Инициализируем сервис
+sheets_service = GoogleSheetsService(config.credentials_file, config.google_sheet_name)
+
 
 def get_webapp_keyboard() -> ReplyKeyboardMarkup:
-    """
-    Reply Keyboard с Web App кнопкой
-    ЭТО ЕДИНСТВЕННЫЙ СПОСОБ, при котором работает sendData()!
-    """
+    """Reply Keyboard с Web App кнопкой"""
     keyboard = ReplyKeyboardMarkup(
         keyboard=[
             [
@@ -37,14 +39,14 @@ def get_webapp_keyboard() -> ReplyKeyboardMarkup:
                 KeyboardButton(text="📋 Мои записи")
             ]
         ],
-        resize_keyboard=True,  # Уменьшить размер кнопок
-        is_persistent=True     # Клавиатура всегда видна
+        resize_keyboard=True,
+        is_persistent=True
     )
     return keyboard
 
 
 def get_inline_keyboard() -> InlineKeyboardMarkup:
-    """Дополнительные Inline кнопки (без Web App)"""
+    """Дополнительные Inline кнопки"""
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
@@ -86,10 +88,8 @@ async def cmd_start(message: Message) -> None:
     )
 
 
-# Обработчики текстовых кнопок Reply Keyboard
 @router.message(F.text == "📞 Связаться с нами")
 async def handle_contact(message: Message) -> None:
-    """Обработчик кнопки 'Связаться с нами'"""
     contact_text = """
 📞 <b>Наши контакты:</b>
 
@@ -104,7 +104,6 @@ async def handle_contact(message: Message) -> None:
 
 @router.message(F.text == "ℹ️ О нас")
 async def handle_about(message: Message) -> None:
-    """Обработчик кнопки 'О нас'"""
     about_text = """
 ℹ️ <b>О нашей компании</b>
 
@@ -118,19 +117,47 @@ async def handle_about(message: Message) -> None:
     await message.answer(about_text, parse_mode="HTML")
 
 
+# 🔥 ОБНОВЛЕННЫЙ ОБРАБОТЧИК: Реальная проверка записей
 @router.message(F.text == "📋 Мои записи")
 async def handle_my_bookings(message: Message) -> None:
-    """Обработчик кнопки 'Мои записи'"""
-    # Здесь можно добавить логику получения записей пользователя
-    await message.answer(
-        "📋 <b>Ваши записи:</b>\n\nУ вас пока нет активных записей.",
-        parse_mode="HTML"
-    )
+    user_id = message.from_user.id
+    
+    try:
+        # 1. Запрашиваем записи из таблицы
+        bookings = sheets_service.get_bookings_by_user(user_id)
+        
+        # 2. Если записей нет
+        if not bookings:
+            await message.answer(
+                "📂 <b>У вас пока нет активных записей.</b>",
+                parse_mode="HTML"
+            )
+            return
+
+        # 3. Формируем красивый список
+        response_text = "📋 <b>Ваши записи:</b>\n"
+        
+        for booking in bookings:
+            # Ключи должны совпадать с заголовками в Google Таблице (русскими)
+            service = booking.get("Услуга", "Услуга")
+            date_time = booking.get("Дата/Время визита", "Время не указано")
+            
+            response_text += f"\n🔹 <b>{service}</b>"
+            response_text += f"\n🕒 {date_time}"
+            response_text += "\n───────────────"
+
+        await message.answer(response_text, parse_mode="HTML")
+
+    except Exception as e:
+        # Логирование ошибки в чат (для отладки)
+        await message.answer(
+            "⚠️ <b>Ошибка получения данных.</b>\nПопробуйте позже.",
+            parse_mode="HTML"
+        )
 
 
 @router.message(Command("menu"))
 async def cmd_menu(message: Message) -> None:
-    """Показать главное меню"""
     await message.answer(
         "📱 <b>Главное меню</b>\n\nВыберите действие:",
         reply_markup=get_webapp_keyboard(),

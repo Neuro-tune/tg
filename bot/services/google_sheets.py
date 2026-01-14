@@ -4,11 +4,10 @@
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List, Dict
 import logging
 
 logger = logging.getLogger(__name__)
-
 
 class GoogleSheetsService:
     """Сервис для работы с Google Таблицами"""
@@ -17,6 +16,9 @@ class GoogleSheetsService:
         'https://spreadsheets.google.com/feeds',
         'https://www.googleapis.com/auth/drive'
     ]
+    
+    # Заголовки (должны совпадать с первой строкой в таблице)
+    HEADERS = ["ID", "Дата записи", "Имя", "Телефон", "Услуга", "Дата/Время визита", "User ID", "Username"]
     
     def __init__(self, credentials_file: str, sheet_name: str):
         self.credentials_file = credentials_file
@@ -49,12 +51,10 @@ class GoogleSheetsService:
         """Проверка и создание заголовков"""
         self._ensure_connection()
         
-        headers = ["ID", "Дата записи", "Имя", "Телефон", "Услуга", "Дата/Время визита", "User ID", "Username"]
-        
         try:
             first_row = self._worksheet.row_values(1)
             if not first_row:
-                self._worksheet.append_row(headers)
+                self._worksheet.append_row(self.HEADERS)
                 # Форматирование заголовков
                 self._worksheet.format('A1:H1', {
                     "backgroundColor": {"red": 0.2, "green": 0.5, "blue": 0.9},
@@ -74,23 +74,16 @@ class GoogleSheetsService:
         user_id: int,
         username: str = ""
     ) -> dict:
-        """
-        Добавление записи в таблицу
-        
-        Returns:
-            dict: Информация о записи с ID
-        """
+        """Добавление записи в таблицу"""
         self._ensure_headers()
         
         try:
             # Генерация ID записи
             all_records = self._worksheet.get_all_values()
-            booking_id = len(all_records)  # Номер записи
+            booking_id = len(all_records)  # Номер записи (учитывая заголовок)
             
-            # Текущая дата и время
             created_at = datetime.now().strftime("%d.%m.%Y %H:%M")
             
-            # Данные для записи
             row_data = [
                 booking_id,
                 created_at,
@@ -102,9 +95,7 @@ class GoogleSheetsService:
                 username
             ]
             
-            # Добавление строки
             self._worksheet.append_row(row_data)
-            
             logger.info(f"✅ Запись #{booking_id} добавлена: {name} - {service}")
             
             return {
@@ -128,4 +119,21 @@ class GoogleSheetsService:
     def get_bookings_count(self) -> int:
         """Получение количества записей"""
         self._ensure_connection()
-        return len(self._worksheet.get_all_values()) - 1  # Минус заголовок
+        return len(self._worksheet.get_all_values()) - 1
+    
+    # 🔥 НОВЫЙ МЕТОД: Поиск записей пользователя
+    def get_bookings_by_user(self, user_id: int) -> List[Dict]:
+        """Получение всех записей конкретного пользователя"""
+        all_records = self.get_all_bookings()
+        
+        user_bookings = []
+        target_id = str(user_id) # Превращаем в строку для надежности
+        
+        for record in all_records:
+            # Ищем ID в колонке "User ID"
+            row_user_id = str(record.get("User ID") or record.get("user_id") or "")
+            
+            if row_user_id == target_id:
+                user_bookings.append(record)
+                
+        return user_bookings

@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Запись на приём</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+</head>
+
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-icon">
+                <span class="material-icons-round">calendar_month</span>
+            </div>
+            <h1>Запись на приём</h1>
+            <p class="subtitle">Заполните форму для бронирования</p>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="progress-container">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="progress-steps">
+                <div class="step active" data-step="1">
+                    <span class="step-number">1</span>
+                    <span class="step-label">Данные</span>
+                </div>
+                <div class="step" data-step="2">
+                    <span class="step-number">2</span>
+                    <span class="step-label">Услуга</span>
+                </div>
+                <div class="step" data-step="3">
+                    <span class="step-number">3</span>
+                    <span class="step-label">Время</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Form -->
+        <form id="bookingForm" class="form">
+            <!-- Step 1: Personal Info -->
+            <div class="form-step active" data-step="1">
+                <div class="form-group">
+                    <label for="name">
+                        <span class="material-icons-round">person</span>
+                        Ваше имя
+                    </label>
+                    <input type="text" id="name" name="name" placeholder="Введите ваше имя" required
+                        autocomplete="name">
+                    <span class="error-message" id="nameError"></span>
+                </div>
+
+                <div class="form-group">
+                    <label for="phone">
+                        <span class="material-icons-round">phone</span>
+                        Телефон
+                    </label>
+                    <input type="tel" id="phone" name="phone" placeholder="+7 (___) ___-__-__" required
+                        autocomplete="tel">
+                    <span class="error-message" id="phoneError"></span>
+                </div>
+            </div>
+
+            <!-- Step 2: Service Selection -->
+            <div class="form-step" data-step="2">
+                <div class="form-group">
+                    <label for="service">
+                        <span class="material-icons-round">medical_services</span>
+                        Выберите услугу
+                    </label>
+                    <div class="select-wrapper">
+                        <select id="service" name="service" required>
+                            <option value="" disabled selected>Выберите услугу...</option>
+                            <optgroup label="💇 Стрижки">
+                                <option value="Мужская стрижка" data-price="1500" data-duration="45">Мужская стрижка — 1
+                                    500 ₽</option>
+                                <option value="Женская стрижка" data-price="2500" data-duration="60">Женская стрижка — 2
+                                    500 ₽</option>
+                                <option value="Детская стрижка" data-price="1000" data-duration="30">Детская стрижка — 1
+                                    000 ₽</option>
+                            </optgroup>
+                            <optgroup label="🎨 Окрашивание">
+                                <option value="Окрашивание корней" data-price="3000" data-duration="90">Окрашивание
+                                    корней — 3 000 ₽</option>
+                                <option value="Полное окрашивание" data-price="5000" data-duration="120">Полное
+                                    окрашивание — 5 000 ₽</option>
+                                <option value="Мелирование" data-price="4500" data-duration="150">Мелирование — 4 500 ₽
+                                </option>
+                            </optgroup>
+                            <optgroup label="✨ Уход">
+                                <option value="Маска для волос" data-price="1000" data-duration="30">Маска для волос — 1
+                                    000 ₽</option>
+                                <option value="Кератиновое выпрямление" data-price="8000" data-duration="180">
+                                    Кератиновое выпрямление — 8 000 ₽</option>
+                                <option value="Ботокс для волос" data-price="6000" data-duration="120">Ботокс для волос
+                                    — 6 000 ₽</option>
+                            </optgroup>
+                        </select>
+                        <span class="material-icons-round select-arrow">expand_more</span>
+                    </div>
+                    <span class="error-message" id="serviceError"></span>
+                </div>
+
+                <!-- Service Info Card -->
+                <div class="service-info" id="serviceInfo" style="display: none;">
+                    <div class="info-row">
+                        <span class="material-icons-round">payments</span>
+                        <span>Стоимость: <strong id="servicePrice">0 ₽</strong></span>
+                    </div>
+                    <div class="info-row">
+                        <span class="material-icons-round">schedule</span>
+                        <span>Длительность: <strong id="serviceDuration">0 мин</strong></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 3: Date & Time -->
+            <div class="form-step" data-step="3">
+                <div class="form-group">
+                    <label for="date">
+                        <span class="material-icons-round">event</span>
+                        Выберите дату
+                    </label>
+                    <input type="date" id="date" name="date" required>
+                    <span class="error-message" id="dateError"></span>
+                </div>
+
+                <div class="form-group">
+                    <label>
+                        <span class="material-icons-round">access_time</span>
+                        Выберите время
+                    </label>
+                    <div class="time-slots" id="timeSlots">
+                        <!-- Time slots will be generated by JavaScript -->
+                    </div>
+                    <input type="hidden" id="time" name="time" required>
+                    <span class="error-message" id="timeError"></span>
+                </div>
+            </div>
+
+            <!-- Summary (shown on final step) -->
+            <div class="summary" id="summary" style="display: none;">
+                <h3>
+                    <span class="material-icons-round">receipt_long</span>
+                    Итого
+                </h3>
+                <div class="summary-content">
+                    <div class="summary-row">
+                        <span>Имя:</span>
+                        <strong id="summaryName"></strong>
+                    </div>
+                    <div class="summary-row">
+                        <span>Телефон:</span>
+                        <strong id="summaryPhone"></strong>
+                    </div>
+                    <div class="summary-row">
+                        <span>Услуга:</span>
+                        <strong id="summaryService"></strong>
+                    </div>
+                    <div class="summary-row">
+                        <span>Дата и время:</span>
+                        <strong id="summaryDateTime"></strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Navigation Buttons -->
+            <div class="form-navigation">
+                <button type="button" class="btn btn-secondary" id="prevBtn" style="display: none;">
+                    <span class="material-icons-round">arrow_back</span>
+                    Назад
+                </button>
+                <button type="button" class="btn btn-primary" id="nextBtn">
+                    Далее
+                    <span class="material-icons-round">arrow_forward</span>
+                </button>
+                <button type="submit" class="btn btn-success" id="submitBtn" style="display: none;">
+                    <span class="material-icons-round">check_circle</span>
+                    Записаться
+                </button>
+            </div>
+        </form>
+
+        <!-- Loading Overlay -->
+        <div class="loading-overlay" id="loadingOverlay">
+            <div class="loading-spinner">
+                <div class="spinner"></div>
+                <p>Отправка данных...</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
